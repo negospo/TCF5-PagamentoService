@@ -61,10 +61,13 @@ namespace API
         static void ConfigBuilder(WebApplicationBuilder builder)
         {
             Infrastructure.Persistence.Settings.PostgreSQLConnectionString = Settings.PostgreSQLConnectionString;
+            Infrastructure.Persistence.Settings.RabbitMQConnectionString = Settings.RabbitMQConnectionString;
+
 
             builder.Services.AddTransient<Application.Interfaces.Repositories.IPedidoPagamentoRepository, Infrastructure.Persistence.Repositories.PedidoPagamentoRepository>();
             builder.Services.AddTransient<Application.Interfaces.UseCases.IPedidoPagamentoUseCase, Application.Implementations.PedidoPagamentoUseCase>();
             builder.Services.AddTransient<Application.Interfaces.UseCases.IPaymentUseCase, MercadoPagoUseCase>();
+            builder.Services.AddTransient<Application.Interfaces.RabbitMQ.IPedidoPagamentoStatus, Infrastructure.RabbitMQ.PedidoPagamentoStatus>();
 
             builder.Services.AddSingleton<IPedidoPagamentoMessageHandler, PedidoPagamentoMessageHandler>();
             builder.Services.AddHostedService<Listener>(serviceProvider => {

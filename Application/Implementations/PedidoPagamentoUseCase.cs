@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Output;
 using Application.Enums;
+using Application.Interfaces.RabbitMQ;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.UseCases;
 
@@ -9,12 +10,13 @@ namespace Application.Implementations
     {
         private readonly IPedidoPagamentoRepository _pedidoPagamentoRepository;
         private readonly IPaymentUseCase _iPaymentUseCase;
+        private readonly IPedidoPagamentoStatus _iPedidoPagamentoStatus;
 
-
-        public PedidoPagamentoUseCase(IPedidoPagamentoRepository pedidoPagamentoRepository, IPaymentUseCase iPaymentUseCase)
+        public PedidoPagamentoUseCase(IPedidoPagamentoRepository pedidoPagamentoRepository, IPaymentUseCase iPaymentUseCase, IPedidoPagamentoStatus iPedidoPagamentoStatus)
         {
             this._pedidoPagamentoRepository = pedidoPagamentoRepository;
             this._iPaymentUseCase = iPaymentUseCase;
+            this._iPedidoPagamentoStatus = iPedidoPagamentoStatus;
         }
 
         PedidoPagamento IPedidoPagamentoUseCase.Get(int pedidoId)
@@ -52,7 +54,16 @@ namespace Application.Implementations
             entity.AtualizaStatusPagamento(processResult.Status);
             entity.AtualizaCodigoTransacao(processResult.CodigoTransacao);
 
-            return _pedidoPagamentoRepository.Save(entity);
+            var result = _pedidoPagamentoRepository.Save(entity);
+          
+            //Joga para a fila do RabbitMQ informando o status de pagamento
+            this._iPedidoPagamentoStatus.SendToQueue(new DTOs.RabbitMQ.PagamentoStatusRequest
+            {
+                PedidoId = pedido.PedidoId.Value,
+                PagamentoStatus = (Enums.PagamentoStatus)processResult.Status
+            });
+
+            return result;
         }
 
 
